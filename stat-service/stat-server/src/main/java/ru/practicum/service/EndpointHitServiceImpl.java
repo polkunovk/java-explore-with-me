@@ -12,7 +12,6 @@ import ru.practicum.repository.EndpointHitRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -20,11 +19,10 @@ import java.util.List;
 @Transactional
 @RequiredArgsConstructor
 public class EndpointHitServiceImpl implements EndpointHitService {
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
     private final EndpointHitMapper endpointHitMapper;
     private final EndpointHitRepository endpointHitRepository;
 
+    @Transactional
     @Override
     public void saveStat(EndpointHitDto statDto) {
         log.info("Сохранение статистики: {}", statDto);
@@ -32,17 +30,13 @@ public class EndpointHitServiceImpl implements EndpointHitService {
         log.info("Статистика успешно сохранена");
     }
 
+    @Transactional
     @Override
-    @Transactional(readOnly = true)
     public List<ViewStats> getStat(String start, String end, List<String> uris, boolean unique) {
         log.info("Получение статистики: start={}, end={}, uris={}, unique={}", start, end, uris, unique);
-
-        LocalDateTime startDateTime = parseDateTime(start);
-        LocalDateTime endDateTime = parseDateTime(end);
-
-        validateTimeRange(startDateTime, endDateTime);
-
-        List<String> processedUris = processUris(uris);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        LocalDateTime startDateTime= LocalDateTime.parse(start, formatter);
+        LocalDateTime endDateTime = LocalDateTime.parse(end, formatter);
 
         return unique
                 ? getUniqueStats(startDateTime, endDateTime, processedUris)
@@ -56,7 +50,6 @@ public class EndpointHitServiceImpl implements EndpointHitService {
             log.error("Ошибка парсинга даты: {}", dateTime);
             throw new ValidationException("Некорректный формат даты. Используйте yyyy-MM-dd HH:mm:ss");
         }
-    }
 
     private void validateTimeRange(LocalDateTime start, LocalDateTime end) {
         if (start.isAfter(end)) {
