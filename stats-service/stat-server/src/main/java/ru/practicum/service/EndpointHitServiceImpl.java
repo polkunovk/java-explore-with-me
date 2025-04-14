@@ -33,6 +33,7 @@ public class EndpointHitServiceImpl implements EndpointHitService {
         log.info("Статистика успешно сохранена");
     }
 
+    @Transactional
     @Override
     public List<ViewStats> getStat(String start, String end, List<String> uris, boolean unique) {
         log.info("Получение статистики: start={}, end={}, uris={}, unique={}", start, end, uris, unique);
