@@ -22,14 +22,13 @@ import java.util.List;
 public class EndpointHitServiceImpl implements EndpointHitService {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    private final EndpointHitMapper endpointHitMapper;
     private final EndpointHitRepository endpointHitRepository;
 
     @Override
     @Transactional
     public void saveStat(EndpointHitDto statDto) {
         log.info("Попытка сохранения статистики: {}", statDto);
-        endpointHitRepository.save(endpointHitMapper.toEntity(statDto));
+        endpointHitRepository.save(EndpointHitMapper.toEntity(statDto));
         log.info("Статистика успешно сохранена: {}", statDto);
     }
 
