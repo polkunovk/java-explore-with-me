@@ -16,9 +16,11 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    @ExceptionHandler({ValidationException.class,
+    @ExceptionHandler({
+            ValidationException.class,
             MissingServletRequestParameterException.class,
-            MethodArgumentNotValidException.class})
+            MethodArgumentNotValidException.class
+    })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleBadRequestsException(Exception e) {
         log.warn(e.getMessage(), e);
