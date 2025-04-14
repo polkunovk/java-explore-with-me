@@ -15,7 +15,7 @@ import java.util.Map;
 
 @Slf4j
 @RestControllerAdvice
-public class GlobalExceptionHandler{
+public class GlobalExceptionHandler {
     @ExceptionHandler({ValidationException.class,
             MissingServletRequestParameterException.class,
             MethodArgumentNotValidException.class})
@@ -40,7 +40,7 @@ public class GlobalExceptionHandler{
             reason = "MissingServletRequestParameterException";
 
             context = Map.of("missingParameter", ex.getParameterName());
-        }else if (e instanceof ValidationException ex) {
+        } else if (e instanceof ValidationException ex) {
             errorMessage = ex.getMessage();
             reason = "ValidationException";
             try {
