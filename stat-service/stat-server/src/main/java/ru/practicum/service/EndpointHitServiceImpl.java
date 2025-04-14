@@ -12,31 +12,37 @@ import ru.practicum.repository.EndpointHitRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 
 @Slf4j
 @Service
-@Transactional
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class EndpointHitServiceImpl implements EndpointHitService {
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     private final EndpointHitMapper endpointHitMapper;
     private final EndpointHitRepository endpointHitRepository;
 
-    @Transactional
     @Override
+    @Transactional
     public void saveStat(EndpointHitDto statDto) {
         log.info("Сохранение статистики: {}", statDto);
         endpointHitRepository.save(endpointHitMapper.toEntity(statDto));
         log.info("Статистика успешно сохранена");
     }
 
-    @Transactional
     @Override
     public List<ViewStats> getStat(String start, String end, List<String> uris, boolean unique) {
         log.info("Получение статистики: start={}, end={}, uris={}, unique={}", start, end, uris, unique);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        LocalDateTime startDateTime= LocalDateTime.parse(start, formatter);
-        LocalDateTime endDateTime = LocalDateTime.parse(end, formatter);
+
+        LocalDateTime startDateTime = parseDateTime(start);
+        LocalDateTime endDateTime = parseDateTime(end);
+
+        validateTimeRange(startDateTime, endDateTime);
+
+        List<String> processedUris = processUris(uris);
 
         return unique
                 ? getUniqueStats(startDateTime, endDateTime, processedUris)
@@ -47,14 +53,15 @@ public class EndpointHitServiceImpl implements EndpointHitService {
         try {
             return LocalDateTime.parse(dateTime, FORMATTER);
         } catch (Exception e) {
-            log.error("Ошибка парсинга даты: {}", dateTime);
-            throw new ValidationException("Некорректный формат даты. Используйте yyyy-MM-dd HH:mm:ss");
+            log.error("Ошибка парсинга даты и времени: {}", dateTime);
+            throw new ValidationException("Неверный формат даты. Используйте yyyy-MM-dd HH:mm:ss");
         }
+    }
 
     private void validateTimeRange(LocalDateTime start, LocalDateTime end) {
         if (start.isAfter(end)) {
-            log.error("Начальная дата {} позже конечной {}", start, end);
-            throw new ValidationException("Начальная дата не может быть позже конечной");
+            log.error("Дата начала {} позже даты окончания {}", start, end);
+            throw new ValidationException("Дата начала должна быть раньше даты окончания");
         }
     }
 
@@ -65,14 +72,14 @@ public class EndpointHitServiceImpl implements EndpointHitService {
     }
 
     private List<ViewStats> getUniqueStats(LocalDateTime start, LocalDateTime end, List<String> uris) {
-        log.info("Получение статистики по уникальным IP");
+        log.info("Получение статистики уникальных IP");
         return uris.isEmpty()
                 ? endpointHitRepository.findUniqueIpViewStats(start, end, null)
                 : endpointHitRepository.findUniqueIpViewStats(start, end, uris);
     }
 
     private List<ViewStats> getAllStats(LocalDateTime start, LocalDateTime end, List<String> uris) {
-        log.info("Получение полной статистики");
+        log.info("Получение всей статистики");
         return uris.isEmpty()
                 ? endpointHitRepository.findAllViewStats(start, end, null)
                 : endpointHitRepository.findAllViewStats(start, end, uris);
