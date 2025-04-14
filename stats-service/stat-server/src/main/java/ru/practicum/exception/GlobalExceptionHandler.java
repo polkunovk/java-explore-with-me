@@ -17,8 +17,8 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler{
     @ExceptionHandler({ValidationException.class,
-    MissingServletRequestParameterException.class,
-    MethodArgumentNotValidException.class})
+            MissingServletRequestParameterException.class,
+            MethodArgumentNotValidException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleBadRequestsException(Exception e) {
         log.warn(e.getMessage(), e);
