@@ -11,10 +11,10 @@
 
     <artifactId>stats-service</artifactId>
     <packaging>pom</packaging>
+
     <modules>
         <module>stat-client</module>
         <module>stat-server</module>
         <module>stat-dto</module>
     </modules>
-
 </project>
