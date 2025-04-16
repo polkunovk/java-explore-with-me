@@ -38,13 +38,11 @@ public class ErrorHandler {
                     .map(error -> "Field '%s': %s".formatted(error.getField(), error.getDefaultMessage()))
                     .toList();
             context = Map.of("invalidFieldsCount", errors.size());
-        }
-        else if (e instanceof MissingServletRequestParameterException ex) {
+        } else if (e instanceof MissingServletRequestParameterException ex) {
             message = "Required parameter '%s' is missing".formatted(ex.getParameterName());
             reason = "MissingServletRequestParameterException";
             context = Map.of("missingParameter", ex.getParameterName());
-        }
-        else if (e instanceof ValidationException ex) {
+        } else if (e instanceof ValidationException ex) {
             message = ex.getMessage();
             reason = "ValidationException";
             context = parseValidationMessage(message);
