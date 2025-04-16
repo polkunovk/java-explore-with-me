@@ -30,13 +30,13 @@ public class GlobalExceptionHandler {
 
         if (e instanceof MethodArgumentNotValidException ex) {
             errors = ex.getBindingResult().getFieldErrors().stream()
-                    .map(fieldError -> String.format("Поле '%s': %s", fieldError.getField(),
+                    .map(fieldError -> String.format("Field '%s': %s", fieldError.getField(),
                             fieldError.getDefaultMessage()))
                     .toList();
 
             context = Map.of("invalidFieldsCount", errors.size());
         } else if (e instanceof MissingServletRequestParameterException ex) {
-            errorMessage = String.format("Обязательный параметр '%s' отсутствует", ex.getParameterName());
+            errorMessage = String.format("Required parameter '%s' is missing", ex.getParameterName());
             reason = "MissingServletRequestParameterException";
 
             context = Map.of("missingParameter", ex.getParameterName());

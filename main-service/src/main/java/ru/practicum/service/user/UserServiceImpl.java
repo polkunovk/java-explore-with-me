@@ -27,10 +27,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDto> getAllUsers(List<Integer> ids, Integer from, Integer size) {
-        log.info("Получение всех пользователей");
+        log.info("Get all users");
         Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.ASC, "id"));
         if (ids == null || ids.isEmpty()) {
-            log.warn("Список пользователей пуст");
+            log.warn("List of users is empty");
             return userRepository.findAll(pageable).stream()
                     .map(UserMapper::toUserDto)
                     .toList();
@@ -43,23 +43,23 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserDto createUser(NewUserRequestDto newUserRequestDto) {
-        log.info("Создание нового пользователя");
+        log.info("Create new user");
         if (userRepository.existsByEmail(newUserRequestDto.getEmail())) {
-            log.error("Пользователь с email {} уже существует", newUserRequestDto.getEmail());
-            throw new InvalidStateException("Пользователь с email " + newUserRequestDto.getEmail() + " уже существует");
+            log.error("User with email {} already exists", newUserRequestDto.getEmail());
+            throw new InvalidStateException("User with email " + newUserRequestDto.getEmail() + " already exists");
         }
         User user = userRepository.save(UserMapper.toUser(newUserRequestDto));
-        log.info("Пользователь с id {} успешно создан", user.getId());
+        log.info("User with id {} successfully created", user.getId());
         return UserMapper.toUserDto(user);
     }
 
     @Override
     @Transactional
     public void deleteUserById(Long userId) {
-        log.info("Удаление пользователя с id {}", userId);
+        log.info("Delete user by id {}", userId);
         if (!userRepository.existsById(userId)) {
-            log.error("Пользователь с id {} не найден", userId);
-            throw new EntityNotFoundException("Пользователь с id " + userId + " не найден");
+            log.error("User with id {} not found", userId);
+            throw new EntityNotFoundException("User with id {}" + userId + " not found");
         }
         userRepository.deleteById(userId);
     }

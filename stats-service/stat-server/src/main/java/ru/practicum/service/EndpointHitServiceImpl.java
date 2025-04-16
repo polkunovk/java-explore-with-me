@@ -24,41 +24,41 @@ public class EndpointHitServiceImpl implements EndpointHitService {
     @Transactional
     @Override
     public void saveStat(EndpointHitDto statDto) {
-        log.info("Попытка сохранить статистику: {}", statDto);
+        log.info("Try to save stat: {}", statDto);
         endpointHitRepository.save(EndpointHitMapper.toEntity(statDto));
-        log.info("Статистика сохранена: {}", statDto);
+        log.info("save stat: {}", statDto);
     }
 
     @Transactional
     @Override
     public List<ViewStats> getViewStats(String start, String end, List<String> uris, boolean unique) {
-        log.info("Получение статистики посещений: start={}, end={}, uris={}, unique={}", start, end, uris, unique);
+        log.info("get statistics on visits: start={}, end={}, uris={}, unique={}", start, end, uris, unique);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         LocalDateTime startDateTime = LocalDateTime.parse(start, formatter);
         LocalDateTime endDateTime = LocalDateTime.parse(end, formatter);
 
         if (startDateTime.isAfter(endDateTime)) {
-            log.error("Дата начала позже даты окончания");
-            throw new ValidationException("Дата начала позже даты окончания");
+            log.error("Start date is after end date");
+            throw new ValidationException("Start date is after end date");
         }
 
         if (uris == null || uris.isEmpty()) {
             if (unique) {
-                log.info("Получение статистики посещений без uris: уникальные IP");
+                log.info("get statistics on visits without uris: ip unique");
                 return endpointHitRepository
                         .findAllByTimestampBetweenStartAndEndWithUniqueIp(startDateTime, endDateTime);
             } else {
-                log.info("Получение статистики посещений без uris: IP не уникальные");
+                log.info("get statistics on visits without uris: ip is not unique");
                 return endpointHitRepository
                         .findAllByTimestampBetweenStartAndEndWhereIpNotUnique(startDateTime, endDateTime);
             }
         } else {
             if (unique) {
-                log.info("Получение статистики посещений с uris: уникальные IP");
+                log.info("get statistics on visits with uris: ip unique");
                 return endpointHitRepository
                         .findAllByTimestampBetweenStartAndEndAndUriUniqueIp(startDateTime, endDateTime, uris);
             } else {
-                log.info("Получение статистики посещений с uris: IP не уникальные");
+                log.info("get statistics on visits with uris: ip is not unique");
                 return endpointHitRepository
                         .findAllByTimestampBetweenStartAndEndAndUriWhereIpNotUnique(startDateTime, endDateTime, uris);
             }

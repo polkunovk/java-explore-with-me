@@ -35,13 +35,13 @@ public class ErrorHandler {
 
         if (e instanceof MethodArgumentNotValidException ex) {
             errors = ex.getBindingResult().getFieldErrors().stream()
-                    .map(fieldError -> String.format("Поле '%s': %s", fieldError.getField(),
+                    .map(fieldError -> String.format("Field '%s': %s", fieldError.getField(),
                             fieldError.getDefaultMessage()))
                     .toList();
 
             context = Map.of("invalidFieldsCount", errors.size());
         } else if (e instanceof MissingServletRequestParameterException ex) {
-            errorMessage = String.format("Отсутствует обязательный параметр '%s'", ex.getParameterName());
+            errorMessage = String.format("Required parameter '%s' is missing", ex.getParameterName());
             reason = "MissingServletRequestParameterException";
 
             context = Map.of("missingParameter", ex.getParameterName());
@@ -99,33 +99,33 @@ public class ErrorHandler {
 
         switch (e) {
             case DuplicateParticipationRequestException ex -> {
-                errorMessage = String.format("Повторный запрос на участие в событии с id=%s", ex.getMessage());
+                errorMessage = String.format("Duplicate participation request for event with id=%s", ex.getMessage());
                 reason = "DuplicateParticipationRequestException";
                 context = Map.of("event", ex.getMessage());
             }
             case InvalidStateException ex -> {
-                errorMessage = String.format("Некорректный статус: %s", ex.getMessage());
+                errorMessage = String.format("Invalid state: %s", ex.getMessage());
                 reason = "InvalidStateException";
                 context = Map.of("state", ex.getMessage());
             }
             case SelfParticipationException ex -> {
-                errorMessage = "Пользователь не может участвовать в своем собственном событии";
+                errorMessage = "User cannot participate in their own event";
                 reason = "SelfParticipationException";
                 context = Map.of("user", ex.getMessage());
             }
             case DataIntegrityViolationException ex -> {
-                errorMessage = "Нарушение целостности данных";
+                errorMessage = "Data integrity violation occurred";
                 reason = "DataIntegrityViolationException";
                 String constraintName = extractConstraintName(ex);
                 context = Map.of("constraint", constraintName, "message", ex.getMessage());
             }
             case DuplicateCategoryException ex -> {
-                errorMessage = String.format("Категория с именем '%s' уже существует", ex.getMessage());
+                errorMessage = String.format("Category with name '%s' already exists", ex.getMessage());
                 reason = "DuplicateCategoryException";
                 context = Map.of("categoryName", ex.getMessage());
             }
             default -> {
-                errorMessage = "Непредвиденная ошибка конфликта";
+                errorMessage = "Unexpected conflict error";
                 reason = "ConflictException";
                 context = Map.of("message", e.getMessage());
             }
@@ -160,7 +160,7 @@ public class ErrorHandler {
         if (rootCause instanceof ConstraintViolationException cvEx) {
             return cvEx.getConstraintName();
         }
-        return "Неизвестное ограничение";
+        return "Unknown constraint";
     }
 
 

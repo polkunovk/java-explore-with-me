@@ -29,7 +29,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public CategoryDto addNewCategory(NewCategoryDto newCategoryDto) {
-        log.info("Добавление новой категории");
+        log.info("Add new category");
         try {
             Category category = categoryRepository.save(CategoryMapper.toNewCategoryDto(newCategoryDto));
             return CategoryMapper.toCategoryDto(category);
@@ -41,39 +41,39 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public void deleteCategoryById(Long categoryId) {
-        log.info("Удаление категории по id: {}", categoryId);
+        log.info("Delete category by id: {}", categoryId);
         if (!categoryRepository.existsById(categoryId)) {
-            log.error("Категория с id: {} не найдена", categoryId);
-            throw new EntityNotFoundException("Категория не найдена");
+            log.error("Category with id: {} not found", categoryId);
+            throw new EntityNotFoundException("Category not found");
         }
         categoryRepository.deleteById(categoryId);
-        log.info("Категория с ID: '{}' успешно удалена", categoryId);
+        log.info("Category with ID: '{}' successfully deleted", categoryId);
     }
 
     @Override
     @Transactional
     public CategoryDto updateCategory(Long categoryId, CategoryDto categoryDto) {
-        log.info("Обновление категории по id: {}", categoryId);
+        log.info("Update category by id: {}", categoryId);
         Category category = categoryRepository.findById(categoryId).orElseThrow(
                 () -> {
-                    log.error("Ошибка обновления категории: Категория с ID '{}' не найдена", categoryId);
-                    return new EntityNotFoundException("Категория не найдена");
+                    log.error("Error updating category: Category with ID '{}' not found", categoryId);
+                    return new EntityNotFoundException("Category not found");
                 }
         );
         if (categoryRepository.findByName(categoryDto.getName()).isPresent() &&
                 !categoryDto.getName().equals(category.getName())) {
-            log.error("Ошибка обновления: Категория с именем '{}' уже существует", categoryDto.getName());
-            throw new DuplicateCategoryException("Категория уже существует");
+            log.error("Error updating category: A category with the name '{}' already exists", categoryDto.getName());
+            throw new DuplicateCategoryException("Category already exist");
         }
         Optional.ofNullable(categoryDto.getName()).ifPresent(category::setName);
         category.setId(categoryId);
-        log.info("Категория с ID '{}' успешно обновлена", categoryId);
+        log.info("Category with ID '{}' successfully updated", categoryId);
         return CategoryMapper.toCategoryDto(categoryRepository.save(category));
     }
 
     @Override
     public List<CategoryDto> getAllCategories(Integer from, Integer size) {
-        log.info("Получение всех категорий");
+        log.info("Get all categories");
         PageRequest pageRequest = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "id"));
         return categoryRepository.findAll(pageRequest).stream()
                 .map(CategoryMapper::toCategoryDto)
@@ -82,12 +82,12 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public CategoryDto getInfoAboutCategoryById(Long catId) {
-        log.info("Получение информации о категории по ID:{}", catId);
+        log.info("Get info About Category by ID:{}", catId);
         if (categoryRepository.findById(catId).isPresent()) {
             return CategoryMapper.toCategoryDto(categoryRepository.findById(catId).get());
         } else {
-            log.error("Категория с ID:{} не найдена", catId);
-            throw new EntityNotFoundException("Категория с ID:" + catId + " не найдена");
+            log.error("Category with ID:{} not found", catId);
+            throw new EntityNotFoundException("Category with ID:" + catId + " not found");
         }
     }
 }

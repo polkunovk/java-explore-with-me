@@ -32,7 +32,7 @@ public class CompilationServiceImpl implements CompilationService {
     @Transactional(readOnly = true)
     @Override
     public List<CompilationDto> getAllCompilations(Boolean pinned, Integer from, Integer size) {
-        log.info("Получение всех подборок с параметрами pinned={}, from={}, size={}", pinned, from, size);
+        log.info("Get all compilations with pinned={}, from={}, size={}", pinned, from, size);
         Pageable pageable = PageRequest.of(from / size, size, Sort.unsorted());
         if (pinned != null) {
             return compilationRepository.findAllByPinned(pinned, pageable).stream()
@@ -47,14 +47,14 @@ public class CompilationServiceImpl implements CompilationService {
 
     @Override
     public CompilationDto getCompilationById(Long compilationId) {
-        log.info("Получение событий по ID подборки={}", compilationId);
+        log.info("Get events by compilation id={}", compilationId);
         return CompilationMapper.toCompilationDto(findCompilationById(compilationId));
     }
 
     @Transactional
     @Override
     public CompilationDto addNewCompilation(NewCompilationDto newCompilationDto) {
-        log.info("Добавление новой подборки={}", newCompilationDto);
+        log.info("Add new compilation={}", newCompilationDto);
         Compilation compilation = CompilationMapper.toCompilation(newCompilationDto);
         compilation.setPinned(Optional.ofNullable(newCompilationDto.getPinned()).orElse(false));
         Set<Long> compEventsId = (newCompilationDto.getEvents() != null) ? newCompilationDto.getEvents() : Collections.emptySet();
@@ -67,7 +67,7 @@ public class CompilationServiceImpl implements CompilationService {
     @Transactional
     @Override
     public void deleteCompilationById(Long compId) {
-        log.info("Удаление подборки по id={}", compId);
+        log.info("Delete compilation by id={}", compId);
         findCompilationById(compId);
         compilationRepository.delete(findCompilationById(compId));
     }
@@ -75,24 +75,24 @@ public class CompilationServiceImpl implements CompilationService {
     @Transactional
     @Override
     public CompilationDto updateCompilation(Long compId, UpdateCompilationRequest updateCompilationRequest) {
-        log.info("Обновление подборки с id={}, новые данные={}", compId, updateCompilationRequest);
-        log.info("Получен запрос на обновление: {}", updateCompilationRequest);
+        log.info("Update compilation with id={} and new data={}", compId, updateCompilationRequest);
+        log.info("Received update request: {}", updateCompilationRequest);
 
         Compilation compilation = findCompilationById(compId);
         Set<Long> eventsId = updateCompilationRequest.getEvents();
         if (eventsId != null && !eventsId.isEmpty()) {
-            log.info("Найдены события: {}", eventRepository.findAllByIdIn(eventsId));
+            log.info("Fetched events: {}", eventRepository.findAllByIdIn(eventsId));
             compilation.setEvents(eventRepository.findAllByIdIn(eventsId));
         }
         Optional.ofNullable(updateCompilationRequest.getTitle()).ifPresent(compilation::setTitle);
         Optional.ofNullable(updateCompilationRequest.getPinned()).ifPresent(compilation::setPinned);
         Compilation saved = compilationRepository.save(compilation);
-        log.info("Обновленная подборка: {}", saved);
+        log.info("Updated compilation: {}", saved);
         return CompilationMapper.toCompilationDto(saved);
     }
 
     private Compilation findCompilationById(Long compId) {
         return compilationRepository.findById(compId).orElseThrow(() ->
-                new EntityNotFoundException("Подборка с id=" + compId + " не найдена"));
+                new EntityNotFoundException("No compilation with id=" + compId));
     }
 }
