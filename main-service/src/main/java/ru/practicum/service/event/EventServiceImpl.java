@@ -396,7 +396,7 @@ public class EventServiceImpl implements EventService {
                               Boolean requestModeration, String title) {
         if (categoryId != null) {
             Category category = categoryRepository.findById(categoryId).orElseThrow(
-                    () -> new EntityNotFoundException("Категория не найдена");
+                    () -> new EntityNotFoundException("Категория не найдена"));
             event.setCategory(category);
         }
         if (location != null) {
