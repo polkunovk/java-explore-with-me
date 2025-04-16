@@ -22,8 +22,8 @@ public interface EndpointHitRepository extends JpaRepository<EndpointHit, Long> 
      */
     @Query("""
         SELECT new ru.practicum.dto.ViewStats(
-            e.app, 
-            e.uri, 
+            e.app,
+            e.uri,
             CASE WHEN :unique THEN COUNT(DISTINCT e.ip) ELSE COUNT(e) END
         )
         FROM EndpointHit e
