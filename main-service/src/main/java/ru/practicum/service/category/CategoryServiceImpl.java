@@ -2,7 +2,9 @@ package ru.practicum.service.category;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.dtos.category.CategoryDto;
@@ -28,13 +30,12 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryDto addNewCategory(NewCategoryDto newCategoryDto) {
         log.info("Добавление новой категории");
-        if (categoryRepository.findByName(newCategoryDto.getName()).isPresent()) {
-            log.error("Ошибка добавления категории: Категория с именем '{}' уже существует", newCategoryDto.getName());
-            throw new DuplicateCategoryException("Категория уже существует");
+        try {
+            Category category = categoryRepository.save(CategoryMapper.toNewCategoryDto(newCategoryDto));
+            return CategoryMapper.toCategoryDto(category);
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicateCategoryException("Категория с таким именем уже существует");
         }
-        CategoryDto createdCategory = CategoryMapper.toCategoryDto(categoryRepository.save(CategoryMapper.toNewCategoryDto(newCategoryDto)));
-        log.info("Категория '{}' успешно добавлена", createdCategory.getName());
-        return createdCategory;
     }
 
     @Override
@@ -53,17 +54,19 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryDto updateCategory(Long categoryId, CategoryDto categoryDto) {
         log.info("Обновление категории по id: {}", categoryId);
-        if (categoryRepository.findByName(categoryDto.getName()).isPresent()) {
-            log.error("Ошибка обновления категории: Категория с именем '{}' уже существует", categoryDto.getName());
-            throw new DuplicateCategoryException("Категория уже существует");
-        }
         Category category = categoryRepository.findById(categoryId).orElseThrow(
                 () -> {
                     log.error("Ошибка обновления категории: Категория с ID '{}' не найдена", categoryId);
                     return new EntityNotFoundException("Категория не найдена");
                 }
         );
+        if (categoryRepository.findByName(categoryDto.getName()).isPresent() &&
+                !categoryDto.getName().equals(category.getName())) {
+            log.error("Ошибка обновления: Категория с именем '{}' уже существует", categoryDto.getName());
+            throw new DuplicateCategoryException("Категория уже существует");
+        }
         Optional.ofNullable(categoryDto.getName()).ifPresent(category::setName);
+        category.setId(categoryId);
         log.info("Категория с ID '{}' успешно обновлена", categoryId);
         return CategoryMapper.toCategoryDto(categoryRepository.save(category));
     }
@@ -71,7 +74,8 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public List<CategoryDto> getAllCategories(Integer from, Integer size) {
         log.info("Получение всех категорий");
-        return categoryRepository.findAll(PageRequest.of(from, size)).stream()
+        PageRequest pageRequest = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "id"));
+        return categoryRepository.findAll(pageRequest).stream()
                 .map(CategoryMapper::toCategoryDto)
                 .toList();
     }
