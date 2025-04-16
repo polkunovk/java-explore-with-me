@@ -102,7 +102,6 @@ public class UserRequestServiceImpl implements UserRequestService {
     public ParticipationRequestDto cancelUserRequest(Long userId, Long requestId) {
         log.info("Отмена запроса пользователя с userId={} и requestId={}", userId, requestId);
         checkUserExists(userId);
-
         Request request = requestRepository.findById(requestId).orElseThrow(
                 () -> new EntityNotFoundException(String.format("Запрос с id=%d не найден", requestId)));
         if (!request.getRequester().getId().equals(userId)) {

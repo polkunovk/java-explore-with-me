@@ -49,6 +49,7 @@ class EventServiceTest {
 
     @Test
     void shouldReturn409WhenParticipantLimitReached() throws Exception {
+        // Создание пользователя, события и запросов
         User user = userRepository.save(new User(1L, "user@example.com", "John Doe"));
 
         Event event = Event.builder()
@@ -84,6 +85,7 @@ class EventServiceTest {
                 .status(UpdateStatus.CONFIRMED)
                 .build();
 
+        // Проверяем статуса 409
         mockMvc.perform(patch("/users/{userId}/events/{eventId}/requests", user.getId(), event.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
@@ -95,6 +97,7 @@ class EventServiceTest {
 
     @Test
     void shouldUpdateRequestStatusToConfirmed() throws Exception {
+        // Создание пользователя, события и запросов
         User user = userRepository.save(new User(1L, "user@example.com", "John Doe"));
 
         Event event = Event.builder()
@@ -130,6 +133,7 @@ class EventServiceTest {
                 .status(UpdateStatus.CONFIRMED)
                 .build();
 
+        // Проверка обновления статуса до CONFIRMED
         mockMvc.perform(patch("/users/{userId}/events/{eventId}/requests", user.getId(), event.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
