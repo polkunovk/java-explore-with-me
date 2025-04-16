@@ -84,6 +84,7 @@ public class ErrorHandler {
                 .status(HttpStatus.NOT_FOUND.name())
                 .localDateTime(LocalDateTime.now())
                 .build();
+
     }
 
     @ExceptionHandler({DuplicateParticipationRequestException.class, InvalidStateException.class,
@@ -161,4 +162,6 @@ public class ErrorHandler {
         }
         return "Неизвестное ограничение";
     }
+
+
 }

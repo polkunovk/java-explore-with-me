@@ -208,7 +208,6 @@ public class EventServiceImpl implements EventService {
         }
         requestRepository.saveAll(Stream.concat(confirmedRequests.stream(), rejectedRequests.stream()).toList());
         eventRepository.save(event);
-
         return new EventRequestStatusUpdateResult(
                 confirmedRequests.stream()
                         .map(RequestMapper::toParticipationRequestDto)
@@ -218,6 +217,7 @@ public class EventServiceImpl implements EventService {
                         .toList());
     }
 
+    //Поиск событий
     @Override
     public List<EventFullDto> getAdminEvents(List<Long> userIds, List<State> states, List<Long> categories,
                                              LocalDateTime rangeStart, LocalDateTime rangeEnd,
@@ -265,10 +265,8 @@ public class EventServiceImpl implements EventService {
         // Проверка даты события только если событие уже опубликовано
         if (adminDto.getEventDate() != null) {
             if (event.getPublishedOn() != null && adminDto.getEventDate().isBefore(event.getPublishedOn().plusHours(1))) {
-                log.warn("The start date of the event to be modified must be no earlier than one hour from" +
-                        " the date of publication");
-                throw new ValidationException("The start time of the event to be modified must be no earlier than one hour" +
-                        " from the date of publication");
+                log.warn("Дата начала события, которое нужно изменить, должна быть не ранее чем через час с момента публикации");
+                throw new ValidationException("Дата начала события, которое нужно изменить, должна быть не ранее чем через час с момента публикации");
             }
         }
 

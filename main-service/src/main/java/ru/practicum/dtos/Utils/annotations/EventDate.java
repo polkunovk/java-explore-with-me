@@ -15,8 +15,8 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface EventDate {
-    String message() default "дата и время, на которые запланировано событие, " +
-            "не могут быть ранее чем через два часа от текущего момента";
+    String message() default "the date and time for which the event is scheduled " +
+            "cannot be earlier than two hours from the current moment";
 
     Class<?>[] groups() default {};
 

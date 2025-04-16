@@ -24,6 +24,7 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
 
+
     @Override
     public List<UserDto> getAllUsers(List<Integer> ids, Integer from, Integer size) {
         log.info("Получение всех пользователей");

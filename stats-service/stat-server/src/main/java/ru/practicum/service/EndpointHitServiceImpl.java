@@ -12,75 +12,56 @@ import ru.practicum.repository.EndpointHitRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.List;
 
 @Slf4j
 @Service
+@Transactional
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class EndpointHitServiceImpl implements EndpointHitService {
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
     private final EndpointHitRepository endpointHitRepository;
 
-    @Override
     @Transactional
-    public void saveStat(EndpointHitDto statDto) {
-        log.info("Попытка сохранения статистики: {}", statDto);
-        endpointHitRepository.save(EndpointHitMapper.toEntity(statDto));
-        log.info("Статистика успешно сохранена: {}", statDto);
-    }
-
     @Override
-    public List<ViewStats> getStat(String start, String end, List<String> uris, boolean unique) {
-        log.info("Запрос статистики посещений: start={}, end={}, uris={}, unique={}", start, end, uris, unique);
-
-        LocalDateTime startDateTime = parseDateTime(start);
-        LocalDateTime endDateTime = parseDateTime(end);
-
-        validateTimeRange(startDateTime, endDateTime);
-
-        List<String> processedUris = processUris(uris);
-
-        return unique
-                ? getUniqueStats(startDateTime, endDateTime, processedUris)
-                : getAllStats(startDateTime, endDateTime, processedUris);
+    public void saveStat(EndpointHitDto statDto) {
+        log.info("Попытка сохранить статистику: {}", statDto);
+        endpointHitRepository.save(EndpointHitMapper.toEntity(statDto));
+        log.info("Статистика сохранена: {}", statDto);
     }
 
-    private LocalDateTime parseDateTime(String dateTime) {
-        try {
-            return LocalDateTime.parse(dateTime, FORMATTER);
-        } catch (Exception e) {
-            log.error("Ошибка парсинга даты: {}", dateTime);
-            throw new ValidationException("Некорректный формат даты. Используйте yyyy-MM-dd HH:mm:ss");
+    @Transactional
+    @Override
+    public List<ViewStats> getViewStats(String start, String end, List<String> uris, boolean unique) {
+        log.info("Получение статистики посещений: start={}, end={}, uris={}, unique={}", start, end, uris, unique);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        LocalDateTime startDateTime = LocalDateTime.parse(start, formatter);
+        LocalDateTime endDateTime = LocalDateTime.parse(end, formatter);
+
+        if (startDateTime.isAfter(endDateTime)) {
+            log.error("Дата начала позже даты окончания");
+            throw new ValidationException("Дата начала позже даты окончания");
         }
-    }
 
-    private void validateTimeRange(LocalDateTime start, LocalDateTime end) {
-        if (start.isAfter(end)) {
-            log.error("Начальная дата {} позже конечной {}", start, end);
-            throw new ValidationException("Начальная дата не может быть позже конечной");
+        if (uris == null || uris.isEmpty()) {
+            if (unique) {
+                log.info("Получение статистики посещений без uris: уникальные IP");
+                return endpointHitRepository
+                        .findAllByTimestampBetweenStartAndEndWithUniqueIp(startDateTime, endDateTime);
+            } else {
+                log.info("Получение статистики посещений без uris: IP не уникальные");
+                return endpointHitRepository
+                        .findAllByTimestampBetweenStartAndEndWhereIpNotUnique(startDateTime, endDateTime);
+            }
+        } else {
+            if (unique) {
+                log.info("Получение статистики посещений с uris: уникальные IP");
+                return endpointHitRepository
+                        .findAllByTimestampBetweenStartAndEndAndUriUniqueIp(startDateTime, endDateTime, uris);
+            } else {
+                log.info("Получение статистики посещений с uris: IP не уникальные");
+                return endpointHitRepository
+                        .findAllByTimestampBetweenStartAndEndAndUriWhereIpNotUnique(startDateTime, endDateTime, uris);
+            }
         }
-    }
-
-    private List<String> processUris(List<String> uris) {
-        return (uris != null && !uris.isEmpty())
-                ? uris
-                : Collections.emptyList();
-    }
-
-    private List<ViewStats> getUniqueStats(LocalDateTime start, LocalDateTime end, List<String> uris) {
-        log.info("Получение статистики по уникальным IP");
-        return uris.isEmpty()
-                ? endpointHitRepository.findUniqueIpViewStats(start, end, null)
-                : endpointHitRepository.findUniqueIpViewStats(start, end, uris);
-    }
-
-    private List<ViewStats> getAllStats(LocalDateTime start, LocalDateTime end, List<String> uris) {
-        log.info("Получение полной статистики");
-        return uris.isEmpty()
-                ? endpointHitRepository.findAllViewStats(start, end, null)
-                : endpointHitRepository.findAllViewStats(start, end, uris);
     }
 }
