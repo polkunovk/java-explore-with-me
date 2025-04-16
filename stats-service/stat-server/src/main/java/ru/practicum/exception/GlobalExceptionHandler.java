@@ -34,19 +34,19 @@ public class GlobalExceptionHandler {
                             fieldError.getDefaultMessage()))
                     .toList();
 
-            context = Map.of("количествоНеверныхПолей", errors.size());
+            context = Map.of("invalidFieldsCount", errors.size());
         } else if (e instanceof MissingServletRequestParameterException ex) {
             errorMessage = String.format("Обязательный параметр '%s' отсутствует", ex.getParameterName());
             reason = "MissingServletRequestParameterException";
 
-            context = Map.of("отсутствующийПараметр", ex.getParameterName());
+            context = Map.of("missingParameter", ex.getParameterName());
         } else if (e instanceof ValidationException ex) {
             errorMessage = ex.getMessage();
             reason = "ValidationException";
             try {
                 String[] parts = errorMessage.split(":");
                 if (parts.length > 1) {
-                    context = Map.of("idСущности", parts[1].trim());
+                    context = Map.of("entityId", parts[1].trim());
                     errorMessage = parts[0].trim();
                 }
             } catch (Exception ignored) {

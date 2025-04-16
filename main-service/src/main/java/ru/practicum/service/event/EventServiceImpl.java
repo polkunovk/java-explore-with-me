@@ -152,8 +152,8 @@ public class EventServiceImpl implements EventService {
                     + eventId + " достигнут");
         }
         if (!event.getInitiator().getId().equals(userId)) {
-            log.error("Пользователь с id {} не является инициатором события с id {}", userId, eventId);
-            throw new ValidationException("Пользователь не является инициатором события");
+            log.warn("Пользователь с id {} не является инициатором события с id{}", userId, eventId);
+            throw new SelfParticipationException("Пользователь не является инициатором события");
         }
         if (event.getParticipantLimit() == 0 || !event.getRequestModeration()) {
             log.error("Подтверждение заявок отключено для события с ID:{}", eventId);
@@ -164,7 +164,7 @@ public class EventServiceImpl implements EventService {
 
         log.debug("Найденные запросы: {}", requests);
         if (!requests.stream()
-                .anyMatch(r -> r.getEvent().getId().equals(eventId))) {
+                .allMatch(r -> r.getEvent().getId().equals(eventId))) {
             log.error("Один или несколько запросов с ID: {} не принадлежат событию с ID:{}", requestIds, eventId);
             throw new ValidationException("Все заявки должны относиться к одному событию");
         }
@@ -176,8 +176,8 @@ public class EventServiceImpl implements EventService {
             case CONFIRMED:
                 for (Request request : requests) {
                     if (request.getStatus() != Status.PENDING) {
-                        log.error("Заявка ID: {} не находится в статусе ожидания", request.getId());
-                        throw new ValidationException("Можно подтверждать только заявки в статусе ожидания");
+                        log.warn("Заявка ID: {} не находится в статусе ожидания", request.getId());
+                        throw new InvalidStateException("Можно подтверждать только заявки в статусе ожидания");
                     }
                     log.debug("Текущие подтвержденные запросы: {}, Лимит участников: {}",
                             event.getConfirmedRequests(), event.getParticipantLimit());
