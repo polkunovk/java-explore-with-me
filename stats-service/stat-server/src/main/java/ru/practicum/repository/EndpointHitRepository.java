@@ -11,49 +11,43 @@ import java.util.List;
 
 public interface EndpointHitRepository extends JpaRepository<EndpointHit, Long> {
 
-    //  уникальные IP для всех URI
+    /**
+     * Получает статистику для указанных URI в заданном временном диапазоне с возможностью учёта уникальных IP адресов
+     *
+     * @param start  Начало временного диапазона (включительно)
+     * @param end    Конец временного диапазона (включительно)
+     * @param uris   Список URI для фильтрации (null - все URI)
+     * @param unique Учитывать только уникальные IP адреса, если true
+     * @return Список объектов ViewStats, отсортированный по убыванию количества обращений
+     */
     @Query("""
-            SELECT new ru.practicum.dto.ViewStats(e.app, e.uri, COUNT(DISTINCT e.ip))
-            FROM EndpointHit e
-            WHERE e.timestamp BETWEEN :start AND :end
-            GROUP BY e.app, e.uri
-            ORDER BY COUNT(DISTINCT e.ip) DESC
-            """)
-    List<ViewStats> findAllByTimestampBetweenStartAndEndWithUniqueIp(@Param("start") LocalDateTime start,
-                                                                     @Param("end") LocalDateTime end);
+        SELECT new ru.practicum.dto.ViewStats(
+            e.app, 
+            e.uri, 
+            CASE WHEN :unique THEN COUNT(DISTINCT e.ip) ELSE COUNT(e) END
+        )
+        FROM EndpointHit e
+        WHERE e.timestamp BETWEEN :start AND :end
+            AND (:uris IS NULL OR e.uri IN :uris)
+        GROUP BY e.app, e.uri
+        ORDER BY CASE WHEN :unique THEN COUNT(DISTINCT e.ip) ELSE COUNT(e) END DESC
+    """)
+    List<ViewStats> findStats(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("uris") List<String> uris,
+            @Param("unique") boolean unique
+    );
 
-    //  все посещения для всех URI.
-    @Query("""
-            SELECT new ru.practicum.dto.ViewStats(e.app, e.uri, COUNT(e.ip))
-            FROM EndpointHit e
-            WHERE e.timestamp BETWEEN :start AND :end
-            GROUP BY e.app, e.uri
-            ORDER BY COUNT(e.ip) DESC
-            """)
-    List<ViewStats> findAllByTimestampBetweenStartAndEndWhereIpNotUnique(@Param("start") LocalDateTime start,
-                                                                         @Param("end") LocalDateTime end);
-
-    //  уникальные IP для указанных URI
-    @Query("""
-            SELECT new ru.practicum.dto.ViewStats(e.app, e.uri, COUNT(DISTINCT e.ip))
-            FROM EndpointHit e
-            WHERE e.timestamp BETWEEN :start AND :end AND e.uri IN :uris
-            GROUP BY e.app, e.uri
-            ORDER BY COUNT(DISTINCT e.ip) DESC
-            """)
-    List<ViewStats> findAllByTimestampBetweenStartAndEndAndUriUniqueIp(@Param("start") LocalDateTime start,
-                                                                       @Param("end") LocalDateTime end,
-                                                                       @Param("uris") List<String> uris);
-
-    //  все посещения для указанных URI
-    @Query("""
-            SELECT new ru.practicum.dto.ViewStats(e.app, e.uri, COUNT(e.ip))
-            FROM EndpointHit e
-            WHERE e.timestamp BETWEEN :start AND :end AND e.uri IN :uris
-            GROUP BY e.app, e.uri
-            ORDER BY COUNT(e.ip) DESC
-            """)
-    List<ViewStats> findAllByTimestampBetweenStartAndEndAndUriWhereIpNotUnique(@Param("start") LocalDateTime start,
-                                                                               @Param("end") LocalDateTime end,
-                                                                               @Param("uris") List<String> uris);
+    /**
+     * Получает статистику для всех URI в заданном временном диапазоне
+     *
+     * @param start  Начало временного диапазона (включительно)
+     * @param end    Конец временного диапазона (включительно)
+     * @param unique Учитывать только уникальные IP адреса, если true
+     * @return Список объектов ViewStats, отсортированный по убыванию количества обращений
+     */
+    default List<ViewStats> findStatsForAllUris(LocalDateTime start, LocalDateTime end, boolean unique) {
+        return findStats(start, end, null, unique);
+    }
 }
