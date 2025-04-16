@@ -61,7 +61,7 @@ public class EventServiceImpl implements EventService {
     public EventFullDto addNewEvent(Long userId, NewEventDto newEventDto) {
         log.info("Добавление нового события пользователем {}", userId);
         if (newEventDto.getEventDate().isBefore(LocalDateTime.now().plusHours(2))) {
-            log.error("Дата события {} раньше чем через 2 часа от текущего времени", newEventDto.getEventDate());
+            log.warn("Дата события {} раньше чем через 2 часа от текущего времени", newEventDto.getEventDate());
             throw new ValidationException("Дата события должна быть минимум на 2 часа позже текущего времени");
         }
 
@@ -89,7 +89,7 @@ public class EventServiceImpl implements EventService {
         checkUserExists(userId);
         Event event = findEventById(eventId);
         if (!event.getInitiator().getId().equals(userId)) {
-            log.error("Пользователь с id {} не является инициатором события с id {}", userId, eventId);
+            log.warn("Пользователь с id {} не является инициатором события с id {}", userId, eventId);
             throw new ValidationException("Пользователь не является инициатором события");
         }
         if (event.getState() == State.PUBLISHED) {
@@ -146,19 +146,22 @@ public class EventServiceImpl implements EventService {
         log.info("Обновление статуса запросов пользователя {} для события {}", userId, eventId);
         checkUserExists(userId);
         Event event = findEventById(eventId);
-        if (Objects.equals(event.getConfirmedRequests(), event.getParticipantLimit())) {
-            log.error("Лимит участников для события с ID: {} достигнут", eventId);
-            throw new ParticipantLimitReachedException("Лимит участников для события с ID:"
-                    + eventId + " достигнут");
-        }
+
         if (!event.getInitiator().getId().equals(userId)) {
-            log.warn("Пользователь с id {} не является инициатором события с id{}", userId, eventId);
+            log.warn("Пользователь с id {} не является инициатором события с id {}", userId, eventId);
             throw new SelfParticipationException("Пользователь не является инициатором события");
         }
         if (event.getParticipantLimit() == 0 || !event.getRequestModeration()) {
-            log.error("Подтверждение заявок отключено для события с ID:{}", eventId);
-            throw new ValidationException("Подтверждение заявок отключено для события с ID:" + eventId);
+            log.error("Подтверждение заявок отключено для этого события с ID: {}", eventId);
+            throw new ValidationException("Подтверждение заявок отключено для этого события с ID: " + eventId);
         }
+
+        if (Objects.equals(event.getConfirmedRequests(), event.getParticipantLimit())) {
+            log.error("Лимит участников для события с ID: {} достигнут", eventId);
+            throw new ParticipantLimitReachedException("Лимит участников для события с ID: "
+                    + eventId + " достигнут");
+        }
+
         List<Long> requestIds = updateRequest.getRequestIds();
         List<Request> requests = requestRepository.findAllById(requestIds);
 

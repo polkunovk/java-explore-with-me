@@ -54,11 +54,11 @@ public class ErrorHandler {
                     context = Map.of("entityId", parts[1].trim());
                     errorMessage = parts[0].trim();
                 } else {
-                    // Если сообщение не содержит ":", добавляем всё сообщение в контекст
+                    // Если сообщение не содержит ":", добавление всего сообщения в контекст
                     context = Map.of("errorMessage", errorMessage);
                 }
             } catch (Exception ignored) {
-                // В случае ошибки всё равно добавляем сообщение в контекст
+                // В случае ошибки также добавление всего сообщения в контекст
                 context = Map.of("errorMessage", errorMessage);
             }
         }
