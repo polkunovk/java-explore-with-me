@@ -218,7 +218,7 @@ public class EventServiceImpl implements EventService {
                         .toList());
     }
 
-    //Поиск событий
+    //Поиск событий. Эндпоинт возвращает полную информацию обо всех событиях подходящих под переданные условия
     @Override
     public List<EventFullDto> getAdminEvents(List<Long> userIds, List<State> states, List<Long> categories,
                                              LocalDateTime rangeStart, LocalDateTime rangeEnd,
