@@ -46,7 +46,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<EventFullDto> getAllEventsByUserId(Long userId, Integer from, Integer size) {
-        log.info("Получение всех событий пользователя {}", userId);
+        log.info("Getting all events of user {}", userId);
         checkUserExists(userId);
         PageRequest pageRequest = PageRequest.of(from / size, size);
         Page<Event> eventPage = eventRepository.findAllByInitiatorId(userId, pageRequest);
@@ -59,10 +59,10 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventFullDto addNewEvent(Long userId, NewEventDto newEventDto) {
-        log.info("Добавление нового события пользователем {}", userId);
+        log.info("Adding new event by user {}", userId);
         if (newEventDto.getEventDate().isBefore(LocalDateTime.now().plusHours(2))) {
-            log.warn("Дата события {} раньше чем через 2 часа от текущего времени", newEventDto.getEventDate());
-            throw new ValidationException("Дата события должна быть минимум на 2 часа позже текущего времени");
+            log.warn("Date of event {} is before now plus 2 hours", newEventDto.getEventDate());
+            throw new ValidationException("Date of event is before now plus 2 hours");
         }
 
         User user = findUserById(userId);
@@ -72,12 +72,12 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public EventFullDto getEventOfUser(Long userId, Long eventId) {
-        log.info("Получение события пользователя {}", userId);
+        log.info("Getting event of user {}", userId);
         checkUserExists(userId);
         Event event = findEventById(eventId);
         if (!event.getInitiator().getId().equals(userId)) {
-            log.warn("Пользователь с id {} не является инициатором события с id {}", userId, eventId);
-            throw new ValidationException("Пользователь не является инициатором события");
+            log.warn("User with id {} is not initiator of event with id {}", userId, eventId);
+            throw new ValidationException("User is not initiator of event");
         }
         return EventMapper.toEventFullDto(event);
     }
@@ -85,23 +85,23 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventFullDto updateEventOfUser(Long userId, Long eventId, UpdateEventUserRequest eventUserRequest) {
-        log.info("Обновление события пользователя {}", userId);
+        log.info("Updating event of user {}", userId);
         checkUserExists(userId);
         Event event = findEventById(eventId);
         if (!event.getInitiator().getId().equals(userId)) {
-            log.warn("Пользователь с id {} не является инициатором события с id {}", userId, eventId);
-            throw new ValidationException("Пользователь не является инициатором события");
+            log.warn("User with id {} is not initiator of event with id {}", userId, eventId);
+            throw new ValidationException("User is not initiator of event");
         }
         if (event.getState() == State.PUBLISHED) {
-            log.error("Событие с id {} уже опубликовано", eventId);
-            throw new InvalidStateException("Нельзя редактировать опубликованное событие");
+            log.error("Event with id {} is already published", eventId);
+            throw new InvalidStateException("You can't edit a published event");
         }
         Optional.ofNullable(eventUserRequest.getAnnotation()).ifPresent(event::setAnnotation);
         Optional.ofNullable(eventUserRequest.getDescription()).ifPresent(event::setDescription);
         if (eventUserRequest.getEventDate() != null) {
             if (eventUserRequest.getEventDate().isBefore(LocalDateTime.now().plusHours(2))) {
-                log.error("Дата события {} раньше чем через 2 часа от текущего времени", eventUserRequest.getEventDate());
-                throw new ValidationException("Дата события должна быть минимум на 2 часа позже текущего времени");
+                log.error("Date of event {} is before now plus 2 hour", eventUserRequest.getEventDate());
+                throw new ValidationException("Date of event is before now plus 2 hour");
             }
             event.setEventDate(eventUserRequest.getEventDate());
         }
@@ -126,13 +126,13 @@ public class EventServiceImpl implements EventService {
             event.setCategory(category);
         }
         Event savedEvent = eventRepository.save(event);
-        log.debug("Сохраненное событие: {}", savedEvent);
+        log.debug("Saved event: {}", savedEvent);
         return EventMapper.toEventFullDto(savedEvent);
     }
 
     @Override
     public List<ParticipationRequestDto> getRequestsOfUserEvent(Long userId, Long eventId) {
-        log.info("Получение запросов пользователя {} для события {}", userId, eventId);
+        log.info("Getting requests of user {} for event {}", userId, eventId);
         checkUserExists(userId);
         checkEventExists(eventId);
         return requestRepository.findByEventId(eventId)
@@ -143,33 +143,32 @@ public class EventServiceImpl implements EventService {
     @Transactional
     public EventRequestStatusUpdateResult updateRequestsStatusOfUserEvent(
             Long userId, Long eventId, EventRequestStatusUpdateRequest updateRequest) {
-        log.info("Обновление статуса запросов пользователя {} для события {}", userId, eventId);
+        log.info("Updating requests status of user {} for event {}", userId, eventId);
         checkUserExists(userId);
         Event event = findEventById(eventId);
 
         if (!event.getInitiator().getId().equals(userId)) {
-            log.warn("Пользователь с id {} не является инициатором события с id {}", userId, eventId);
-            throw new SelfParticipationException("Пользователь не является инициатором события");
+            log.warn("User with id {} is not initiator of event with id {}", userId, eventId);
+            throw new SelfParticipationException("User is not initiator of event");
         }
         if (event.getParticipantLimit() == 0 || !event.getRequestModeration()) {
-            log.error("Подтверждение заявок отключено для этого события с ID: {}", eventId);
-            throw new ValidationException("Подтверждение заявок отключено для этого события с ID: " + eventId);
+            log.error("Application confirmation is disabled for this event with ID:{}", eventId);
+            throw new ValidationException("Application confirmation is disabled for this event with ID:" + eventId);
         }
 
         if (Objects.equals(event.getConfirmedRequests(), event.getParticipantLimit())) {
-            log.error("Лимит участников для события с ID: {} достигнут", eventId);
-            throw new ParticipantLimitReachedException("Лимит участников для события с ID: "
-                    + eventId + " достигнут");
+            log.error("The participant limit for event with ID: {} has been reached", eventId);
+            throw new ParticipantLimitReachedException("The participant limit for event with ID:"
+                    + eventId + " has been reached");
         }
-
         List<Long> requestIds = updateRequest.getRequestIds();
         List<Request> requests = requestRepository.findAllById(requestIds);
 
-        log.debug("Найденные запросы: {}", requests);
+        log.debug("Found requests: {}", requests);
         if (!requests.stream()
                 .allMatch(r -> r.getEvent().getId().equals(eventId))) {
-            log.error("Один или несколько запросов с ID: {} не принадлежат событию с ID:{}", requestIds, eventId);
-            throw new ValidationException("Все заявки должны относиться к одному событию");
+            log.error("One or more requests do not belong to event with ID:{}", eventId);
+            throw new ValidationException("All applications must be related to one event");
         }
 
         List<Request> confirmedRequests = new ArrayList<>();
@@ -179,13 +178,13 @@ public class EventServiceImpl implements EventService {
             case CONFIRMED:
                 for (Request request : requests) {
                     if (request.getStatus() != Status.PENDING) {
-                        log.warn("Заявка ID: {} не находится в статусе ожидания", request.getId());
-                        throw new InvalidStateException("Можно подтверждать только заявки в статусе ожидания");
+                        log.warn("Application ID: {} is not in the pending status", request.getId());
+                        throw new InvalidStateException("Only applications with a pending status can be confirmed");
                     }
-                    log.debug("Текущие подтвержденные запросы: {}, Лимит участников: {}",
+                    log.debug("Current confirmed requests: {}, Participant limit: {}",
                             event.getConfirmedRequests(), event.getParticipantLimit());
                     if (event.getConfirmedRequests() >= event.getParticipantLimit()) {
-                        log.warn("Невозможно подтвердить запрос из-за достижения лимита участников.");
+                        log.warn("Cannot confirm request due to participant limit being reached.");
                         request.setStatus(Status.REJECTED);
                         rejectedRequests.add(request);
                     } else {
@@ -198,16 +197,16 @@ public class EventServiceImpl implements EventService {
             case REJECTED:
                 for (Request request : requests) {
                     if (request.getStatus() != Status.PENDING) {
-                        log.error("Заявка ID: {} не находится в статусе ожидания", request.getId());
-                        throw new ValidationException("Можно отклонять только заявки в статусе ожидания");
+                        log.error("Application ID: {} is not in the pending status", request.getId());
+                        throw new ValidationException("Only applications with a pending status can be confirmed");
                     }
                     request.setStatus(Status.REJECTED);
                     rejectedRequests.add(request);
                 }
                 break;
             default:
-                log.error("Неверный статус запроса");
-                throw new ValidationException("Неверный статус запроса");
+                log.error("Invalid request status");
+                throw new ValidationException("Invalid request status");
         }
         requestRepository.saveAll(Stream.concat(confirmedRequests.stream(), rejectedRequests.stream()).toList());
         eventRepository.save(event);
@@ -225,7 +224,7 @@ public class EventServiceImpl implements EventService {
     public List<EventFullDto> getAdminEvents(List<Long> userIds, List<State> states, List<Long> categories,
                                              LocalDateTime rangeStart, LocalDateTime rangeEnd,
                                              Integer from, Integer size) {
-        log.info("Получение событий администраторов с пользователями {}, состояниями {}, категориями {}, началом диапазона {}, концом диапазона {}",
+        log.info("Getting admin events with users {}, states {}, categories {}, range start {}, range end {}",
                 userIds, states, categories, rangeStart, rangeEnd);
         Page<Event> eventPage;
         Pageable pageable = createPageable(from, size, Sort.by(Sort.Direction.ASC, "createdOn"));
@@ -257,19 +256,21 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventFullDto updateEventOfAdmin(Long eventId, UpdateEventAdminRequest adminDto) {
-        log.info("Обновление события администратора с id {}", eventId);
+        log.info("Updating event of Admin with id {}", eventId);
         Event event = findEventById(eventId);
 
         if (event.getState() != State.PENDING) {
-            log.warn("Событие с id {} не находится в состоянии ожидания. Невозможно выполнить эту операцию.", event.getId());
-            throw new InvalidStateException("Событие уже было опубликовано");
+            log.warn("Event with id {} is not state pending. Cannot perform this operation.", event.getId());
+            throw new InvalidStateException("Event has already been published");
         }
 
         // Проверка даты события только если событие уже опубликовано
         if (adminDto.getEventDate() != null) {
             if (event.getPublishedOn() != null && adminDto.getEventDate().isBefore(event.getPublishedOn().plusHours(1))) {
-                log.warn("Дата начала события, которое нужно изменить, должна быть не ранее чем через час с момента публикации");
-                throw new ValidationException("Дата начала события, которое нужно изменить, должна быть не ранее чем через час с момента публикации");
+                log.warn("The start date of the event to be modified must be no earlier than one hour from" +
+                        " the date of publication");
+                throw new ValidationException("The start time of the event to be modified must be no earlier than one hour" +
+                        " from the date of publication");
             }
         }
 
@@ -292,7 +293,7 @@ public class EventServiceImpl implements EventService {
                 adminDto.getRequestModeration(), adminDto.getTitle());
 
         setViews(List.of(savedEvent));
-        log.info("Событие {} обновлено администратором", savedEvent);
+        log.info("Event {} updated from admin", savedEvent);
         return EventMapper.toEventFullDto(savedEvent);
     }
 
@@ -308,8 +309,8 @@ public class EventServiceImpl implements EventService {
                                                            String sort,
                                                            int from,
                                                            int size) {
-        log.info("Получение списка событий по фильтру: текст={}, категории={}, платные={}, начало диапазона={}, конец диапазона={}, " +
-                        "только доступные={}, сортировка={}, от={}, размер={}",
+        log.info("Getting event list by filter: text={}, categories={}, paid={}, rangeStart={}, rangeEnd={}, " +
+                        "onlyAvailable={}, sort={}, from={}, size={}",
                 text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
         Page<Event> events;
         Pageable pageable;
@@ -318,8 +319,8 @@ public class EventServiceImpl implements EventService {
             case "VIEWS" -> pageable = createPageable(from, size, Sort.by(Sort.Direction.ASC, "id"));
             case null -> pageable = createPageable(from, size, Sort.unsorted());
             default -> {
-                log.warn("Неподдерживаемый тип сортировки");
-                throw new InvalidStateException("Неподдерживаемый тип сортировки");
+                log.warn("Unsupported sort type");
+                throw new InvalidStateException("Unsupported sort type");
             }
         }
         BooleanBuilder queryBuilder = new BooleanBuilder();
@@ -356,11 +357,11 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public EventFullDto getPublicEventById(Long eventId) {
-        log.info("Получение полного события по id: {}", eventId);
+        log.info("Getting full event by id: {}", eventId);
         Event event = findEventById(eventId);
         if (event.getState() != State.PUBLISHED) {
-            log.warn("Событие с Id={} не опубликовано", eventId);
-            throw new EntityNotFoundException("Событие с Id=" + eventId + " не найдено");
+            log.warn("Event with Id={} not published", eventId);
+            throw new EntityNotFoundException("Event with Id=" + eventId + " not found");
         }
         setViews(List.of(event));
         return EventMapper.toEventFullDto(event);
@@ -397,7 +398,7 @@ public class EventServiceImpl implements EventService {
                               Boolean requestModeration, String title) {
         if (categoryId != null) {
             Category category = categoryRepository.findById(categoryId).orElseThrow(
-                    () -> new EntityNotFoundException("Категория не найдена"));
+                    () -> new EntityNotFoundException("Category not found"));
             event.setCategory(category);
         }
         if (location != null) {
@@ -424,8 +425,8 @@ public class EventServiceImpl implements EventService {
     private void applyDateRangeFilter(LocalDateTime rangeStart, LocalDateTime rangeEnd, BooleanBuilder queryBuilder) {
         if (rangeStart != null && rangeEnd != null) {
             if (rangeStart.isAfter(rangeEnd)) {
-                log.warn("Время начала не должно быть позже времени окончания");
-                throw new ValidationException("Время начала не должно быть позже времени окончания");
+                log.warn("Start time must be not after end time");
+                throw new ValidationException("Start time must be not after end time");
             }
             queryBuilder.and(event.eventDate.between(rangeStart, rangeEnd));
         } else if (rangeStart == null && rangeEnd != null) {
@@ -437,15 +438,15 @@ public class EventServiceImpl implements EventService {
 
     private void checkUserExists(Long userId) {
         if (!userRepository.existsById(userId)) {
-            log.warn("Пользователь с id {} не найден", userId);
-            throw new EntityNotFoundException("Пользователь с ID: " + userId + " не найден");
+            log.warn("User with id {} not found", userId);
+            throw new EntityNotFoundException("User with ID: " + userId + " not found");
         }
     }
 
     private void checkEventExists(Long eventId) {
         if (!eventRepository.existsById(eventId)) {
-            log.warn("Событие с id {} не найдено", eventId);
-            throw new EntityNotFoundException("Событие с ID: " + eventId + " не найдено");
+            log.warn("Event with id {} not found", eventId);
+            throw new EntityNotFoundException("Event with ID: " + eventId + " not found");
         }
     }
 
@@ -455,12 +456,12 @@ public class EventServiceImpl implements EventService {
 
     private Category findCategoryById(Long categoryId) {
         return categoryRepository.findById(categoryId).orElseThrow(
-                () -> new EntityNotFoundException("Категория с id={} не найдена"));
+                () -> new EntityNotFoundException("Category with id={} not found"));
     }
 
     private Event findEventById(Long eventId) {
         return eventRepository.findById(eventId).orElseThrow(
-                () -> new EntityNotFoundException("Событие с id={} не найдено"));
+                () -> new EntityNotFoundException("Event with id={} not found"));
     }
 
 }
