@@ -55,7 +55,6 @@ public class ErrorHandler {
                     errorMessage = parts[0].trim();
                 }
             } catch (Exception ignored) {
-
             }
         }
         return ApiError.builder()
@@ -80,11 +79,10 @@ public class ErrorHandler {
                 .status(HttpStatus.NOT_FOUND.name())
                 .localDateTime(LocalDateTime.now())
                 .build();
-
     }
 
     @ExceptionHandler({DuplicateParticipationRequestException.class, InvalidStateException.class,
-            SelfParticipationException.class, DataIntegrityViolationException.class})
+            SelfParticipationException.class, DataIntegrityViolationException.class, DuplicateCategoryException.class})
     @ResponseStatus(HttpStatus.CONFLICT)
     public ApiError handleConflict(final Exception e) {
         log.warn(e.getMessage(), e);
@@ -93,27 +91,38 @@ public class ErrorHandler {
         String reason;
         Map<String, Object> context;
 
-        if (e instanceof DuplicateParticipationRequestException ex) {
-            errorMessage = String.format("Повторный запрос на участие в событии с id=%s", ex.getMessage());
-            reason = "DuplicateParticipationRequestException";
-            context = Map.of("event", ex.getMessage());
-        } else if (e instanceof InvalidStateException ex) {
-            errorMessage = String.format("Некорректный статус: %s", ex.getMessage());
-            reason = "InvalidStateException";
-            context = Map.of("state", ex.getMessage());
-        } else if (e instanceof SelfParticipationException ex) {
-            errorMessage = "Пользователь не может участвовать в своем собственном событии";
-            reason = "SelfParticipationException";
-            context = Map.of("user", ex.getMessage());
-        } else if (e instanceof DataIntegrityViolationException ex) {
-            errorMessage = "Нарушение целостности данных";
-            reason = "DataIntegrityViolationException";
-            String constraintName = extractConstraintName(ex);
-            context = Map.of("constraint", constraintName, "message", ex.getMessage());
-        } else {
-            errorMessage = "Непредвиденная ошибка конфликта";
-            reason = "ConflictException";
-            context = Map.of("message", e.getMessage());
+        switch (e) {
+            case DuplicateParticipationRequestException ex -> {
+                errorMessage = String.format("Повторный запрос на участие в событии с id=%s", ex.getMessage());
+                reason = "DuplicateParticipationRequestException";
+                context = Map.of("event", ex.getMessage());
+            }
+            case InvalidStateException ex -> {
+                errorMessage = String.format("Некорректный статус: %s", ex.getMessage());
+                reason = "InvalidStateException";
+                context = Map.of("state", ex.getMessage());
+            }
+            case SelfParticipationException ex -> {
+                errorMessage = "Пользователь не может участвовать в своем собственном событии";
+                reason = "SelfParticipationException";
+                context = Map.of("user", ex.getMessage());
+            }
+            case DataIntegrityViolationException ex -> {
+                errorMessage = "Нарушение целостности данных";
+                reason = "DataIntegrityViolationException";
+                String constraintName = extractConstraintName(ex);
+                context = Map.of("constraint", constraintName, "message", ex.getMessage());
+            }
+            case DuplicateCategoryException ex -> {
+                errorMessage = String.format("Категория с именем '%s' уже существует", ex.getMessage());
+                reason = "DuplicateCategoryException";
+                context = Map.of("categoryName", ex.getMessage());
+            }
+            default -> {
+                errorMessage = "Непредвиденная ошибка конфликта";
+                reason = "ConflictException";
+                context = Map.of("message", e.getMessage());
+            }
         }
 
         return ApiError.builder()
@@ -133,5 +142,4 @@ public class ErrorHandler {
         }
         return "Неизвестное ограничение";
     }
-
 }
