@@ -5,7 +5,6 @@ import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.dtos.comment.CommentDto;
 import ru.practicum.dtos.comment.NewCommentDto;
@@ -20,37 +19,35 @@ import java.util.List;
 @RequestMapping("/comments/users/{userId}")
 public class CommentPrivateController {
 
-    private final CommentService commentService;
+    private CommentService commentService;
 
     @GetMapping("/comments")
-    public List<CommentDto> getUserAuthoredComments(@PathVariable @PositiveOrZero Long userId) {
+    public List<CommentDto> getAllCommentsAboutUser(@PathVariable @PositiveOrZero Long userId) {
         log.info("GET /comments/users/{}/comments", userId);
-        return commentService.getUserAuthoredComments(userId);
+        return commentService.getAllCommentsAboutUser(userId);
     }
 
     @GetMapping("/{commentId}")
-    public CommentDto getCommentById(@PathVariable @PositiveOrZero Long userId,
-                                     @PathVariable @PositiveOrZero Long commentId) {
-        log.info("GET /comments/users/{}/comments/{}", userId, commentId);
-        return commentService.getCommentById(userId, commentId);
+    public List<CommentDto> getCommentById(@PathVariable @PositiveOrZero Long commentId) {
+        log.info("GET /comments/{}", commentId);
+        return commentService.getInfoAboutCommentById(commentId);
     }
 
     @PostMapping("/events/{eventId}")
     @ResponseStatus(HttpStatus.CREATED)
     public CommentDto addNewComment(@PathVariable @PositiveOrZero Long userId,
-                                    @PathVariable @PositiveOrZero Long eventId,
-                                    @RequestBody @Validated NewCommentDto newCommentDto) {
+                                    @RequestBody @Valid NewCommentDto newCommentDto) {
         log.info("POST /comments/users/{}/events", userId);
-        return commentService.addNewComment(userId, eventId, newCommentDto);
+        return commentService.addNewComment(userId, newCommentDto);
     }
 
     @PatchMapping("/{commentId}")
     @ResponseStatus(HttpStatus.OK)
-    public CommentDto updateCommentByUser(@PathVariable @PositiveOrZero Long userId,
-                                          @PathVariable @PositiveOrZero Long commentId,
-                                          @RequestBody @Validated UpdateCommentDto updateCommentDto) {
+    public CommentDto updateCommentById(@PathVariable @PositiveOrZero Long userId,
+                                        @PathVariable @PositiveOrZero Long commentId,
+                                        @RequestBody @Valid UpdateCommentDto updateCommentDto) {
         log.info("PATCH /comments/users/{}/comments/{}", userId, commentId);
-        return commentService.updateCommentByUser(userId, commentId, updateCommentDto);
+        return commentService.updateCommentById(userId, commentId, updateCommentDto);
     }
 
     @DeleteMapping("/{commentId}")
@@ -63,11 +60,10 @@ public class CommentPrivateController {
 
     @PostMapping("/events/{eventId}/comments/{parentCommentId}/replies")
     @ResponseStatus(HttpStatus.CREATED)
-    public CommentDto addNewReply(@PathVariable @PositiveOrZero Long userId,
-                                  @PathVariable @PositiveOrZero Long eventId,
+    public CommentDto addNewReply(@PathVariable @PositiveOrZero Long eventId,
                                   @PathVariable @PositiveOrZero Long parentCommentId,
-                                  @RequestBody @Valid NewCommentDto newCommentDto) {
+                                  @RequestBody @Valid CommentDto commentDto) {
         log.info("POST /admin/comments/events/{}/comments/{}/replies", eventId, parentCommentId);
-        return commentService.addNewReply(userId, eventId, parentCommentId, newCommentDto);
+        return commentService.addNewReply(eventId, parentCommentId, commentDto);
     }
 }

@@ -2,7 +2,6 @@ package ru.practicum.service.comment;
 
 import ru.practicum.dtos.comment.CommentDto;
 import ru.practicum.dtos.comment.NewCommentDto;
-import ru.practicum.dtos.comment.StatusUpdateDto;
 import ru.practicum.dtos.comment.UpdateCommentDto;
 import ru.practicum.enums.StatusComment;
 
@@ -10,29 +9,27 @@ import java.util.List;
 
 public interface CommentService {
 
-    List<CommentDto> getAllCommentsByFilter(String text, StatusComment status, Integer from, Integer size);
+    List<CommentDto> getAllCommentsByText(String text, Integer from, Integer size);
 
-    CommentDto getCommentByIdFromAdmin(Long commentId);
+    List<CommentDto> getCommentsForModeration(Integer from, Integer size);
 
-    CommentDto updateCommentStatusByAdmin(Long commentId, StatusUpdateDto status);
+    CommentDto updateCommentStatusByAdmin(Long commentId, StatusComment status);
 
     void deleteCommentByIdFromAdmin(Long commentId);
 
-    void hardDeleteComment(Long commentId);
+    List<CommentDto> getCommentsAboutEvent(Long eventId);
 
-    List<CommentDto> getCommentsAboutEvent(Long eventId, Integer from, Integer size);
+    List<CommentDto> getAllCommentsAboutUser(Long userId);
 
-    List<CommentDto> getUserAuthoredComments(Long userId);
+    List<CommentDto> getInfoAboutCommentById(Long commentId);
 
-    CommentDto getCommentById(Long userId, Long commentId);
+    CommentDto addNewComment(Long userId, NewCommentDto newCommentDto);
 
-    CommentDto addNewComment(Long userId, Long eventId, NewCommentDto newCommentDto);
+    CommentDto updateCommentById(Long userId, Long eventId, UpdateCommentDto updateCommentDto);
 
-    CommentDto updateCommentByUser(Long userId, Long commentId, UpdateCommentDto updateCommentDto);
+    void deleteCommentById(Long userId, Long eventId);
 
-    void deleteCommentById(Long userId, Long commentId);
-
-    CommentDto addNewReply(Long userId, Long eventId, Long parentCommentId, NewCommentDto newCommentDto);
+    CommentDto addNewReply(Long eventId, Long parentCommentId, CommentDto commentDto);
 
     String getUserNameById(Long userId);
 }

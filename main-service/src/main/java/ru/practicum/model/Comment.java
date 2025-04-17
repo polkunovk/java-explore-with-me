@@ -4,8 +4,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import ru.practicum.enums.StatusComment;
 
 import java.time.LocalDateTime;
@@ -28,28 +26,24 @@ public class Comment {
     @Column(name = "comment_id")
     Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "event_id")
-    Event event;
+    @Column(name = "event_id")
+    Long eventId;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    User author;
+    @Column(name = "user_id")
+    Long userId;
 
-    @Column(name = "text", nullable = false)
+    @Column(name = "text")
     @NotBlank
     String text;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    StatusComment status = StatusComment.CHECKING;
+    StatusComment status;
 
-    @Column(name = "created", nullable = false)
-    @CreationTimestamp
+    @Column(name = "created")
     LocalDateTime created;
 
     @Column(name = "updated")
-    @UpdateTimestamp
     LocalDateTime updated;
 
     @Column(name = "is_deleted", nullable = false)

@@ -22,6 +22,7 @@ public class UpdateEventUserRequest {
     @Size(min = 20, max = 2000)
     String annotation;
 
+    // new
     @Positive
     Long category;
 
