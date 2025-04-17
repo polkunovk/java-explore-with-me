@@ -63,7 +63,8 @@ public class ErrorHandler {
             InvalidStateException.class,
             SelfParticipationException.class,
             DataIntegrityViolationException.class,
-            DuplicateCategoryException.class})
+            DuplicateCategoryException.class,
+            ParticipantLimitReachedException.class})
     @ResponseStatus(HttpStatus.CONFLICT)
     public ApiError handleConflict(Exception e) {
         log.warn(e.getMessage(), e);
@@ -95,6 +96,11 @@ public class ErrorHandler {
                             "DuplicateCategoryException",
                             Map.of("categoryName", ex.getMessage()));
 
+            case ParticipantLimitReachedException ex ->
+                    buildConflictError("Participant limit reached for event with id=%s".formatted(ex.getMessage()),
+                            "ParticipantLimitReachedException",
+                            Map.of("eventId", ex.getMessage()));
+
             default ->
                     buildConflictError("Unexpected conflict error",
                             "ConflictException",
@@ -102,12 +108,16 @@ public class ErrorHandler {
         };
     }
 
-    @ExceptionHandler(ParticipantLimitReachedException.class)
-    @ResponseStatus(HttpStatus.CONFLICT)
-    public ApiError handleParticipantLimitReached(ParticipantLimitReachedException e) {
-        log.warn(e.getMessage(), e);
-        return buildApiError(Collections.emptyList(), e.getMessage(),
-                "ParticipantLimitReachedException", HttpStatus.CONFLICT);
+    @ExceptionHandler(Throwable.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ApiError handleAllExceptions(Throwable e) {
+        log.error("Internal server error: {}", e.getMessage(), e);
+        return buildApiError(
+                Collections.emptyList(),
+                "An unexpected error occurred.",
+                "Internal Server Error",
+                HttpStatus.INTERNAL_SERVER_ERROR
+        );
     }
 
     private Map<String, Object> parseValidationMessage(String message) {

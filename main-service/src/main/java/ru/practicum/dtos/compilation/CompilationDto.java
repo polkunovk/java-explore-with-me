@@ -16,7 +16,7 @@ import java.util.Set;
 public class CompilationDto {
 
     Long id;
-    Boolean pinned;
+    boolean pinned;
     @Size(min = 1, max = 50)
     String title;
     Set<EventShortDto> events;
