@@ -34,7 +34,6 @@ import static ru.practicum.model.QEvent.event;
 
 @Slf4j
 @Service
-@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
@@ -45,6 +44,7 @@ public class EventServiceImpl implements EventService {
 
 
     @Override
+    @Transactional(readOnly = true)
     public List<EventFullDto> getAllEventsByUserId(Long userId, Integer from, Integer size) {
         log.info("Getting all events of user {}", userId);
         checkUserExists(userId);
@@ -71,6 +71,7 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public EventFullDto getEventOfUser(Long userId, Long eventId) {
         log.info("Getting event of user {}", userId);
         checkUserExists(userId);
@@ -131,6 +132,7 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ParticipationRequestDto> getRequestsOfUserEvent(Long userId, Long eventId) {
         log.info("Getting requests of user {} for event {}", userId, eventId);
         checkUserExists(userId);
@@ -355,6 +357,7 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public EventFullDto getPublicEventById(Long eventId) {
         log.info("Getting full event by id: {}", eventId);
         Event event = findEventById(eventId);
