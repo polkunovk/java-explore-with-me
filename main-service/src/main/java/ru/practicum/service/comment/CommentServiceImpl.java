@@ -1,12 +1,17 @@
 package ru.practicum.service.comment;
 
+import com.querydsl.core.BooleanBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.dtos.comment.CommentDto;
 import ru.practicum.dtos.comment.NewCommentDto;
+import ru.practicum.dtos.comment.StatusUpdateDto;
 import ru.practicum.dtos.comment.UpdateCommentDto;
 import ru.practicum.enums.State;
 import ru.practicum.enums.StatusComment;
@@ -16,15 +21,14 @@ import ru.practicum.error.exception.ValidationException;
 import ru.practicum.mapper.CommentMapper;
 import ru.practicum.model.Comment;
 import ru.practicum.model.Event;
+import ru.practicum.model.QComment;
 import ru.practicum.model.User;
 import ru.practicum.repository.CommentRepository;
 import ru.practicum.repository.EventRepository;
 import ru.practicum.repository.UserRepository;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -37,26 +41,55 @@ public class CommentServiceImpl implements CommentService {
     private final CommentMapper commentMapper;
 
     @Override
-    public List<CommentDto> getAllCommentsByText(String text, StatusComment statusComment,
-                                                 Integer from, Integer size) {
-        return List.of();
+    @Transactional(readOnly = true)
+    public List<CommentDto> getAllCommentsByFilter(String text, StatusComment statusComment,
+                                                   Integer from, Integer size) {
+        log.info("Getting comments by filter");
+        QComment comment = QComment.comment;
+        BooleanBuilder builder = new BooleanBuilder();
+        if (text != null && !text.isBlank()) {
+            builder.and(comment.text.containsIgnoreCase(text));
+        }
+
+        // Фильтрация по тексту и статусу (мягкое удаление)
+        if (statusComment != null) {
+            builder.and(comment.status.eq(statusComment));
+            if (statusComment != StatusComment.DELETED) {
+                builder.and(comment.isDeleted.eq(false));  // Исключаем удаленные для активных статусов
+            }
+        } else {
+            builder.and(comment.isDeleted.eq(false));  // По умолчанию показываем активные
+        }
+        Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.ASC, "created"));
+        Page<Comment> commentsPage = commentRepository.findAll(builder, pageable);
+        List<Comment> allComments = new ArrayList<>(commentsPage.getContent());
+        for (Comment c : commentsPage.getContent()) {
+            allComments.addAll(findAllReplyComments(c, Objects.requireNonNull(statusComment)));
+        }
+        return allComments.stream()
+                .map(commentMapper::mapToCommentDto)
+                .toList();
     }
 
+    @Transactional(readOnly = true)
     @Override
-    public List<CommentDto> getCommentsForModeration(Integer from, Integer size) {
-        return List.of();
+    public CommentDto getCommentByIdFromAdmin(Long commentId) {
+        log.info("Getting comment by ID {} from Admin", commentId);
+        return commentMapper.mapToCommentDto(createCommentById(commentId));
     }
 
     @Transactional
     @Override
-    public CommentDto updateCommentStatusByAdmin(Long commentId, StatusComment status) {
+    public CommentDto updateCommentStatusByAdmin(Long commentId, StatusUpdateDto status) {
         log.info("Updating status of comment with ID {} by admin", commentId);
         Comment comment = createCommentById(commentId);
+
+        // Проверка, что комментарий еще не опубликован
         if (comment.getStatus().equals(StatusComment.PUBLISHED)) {
             log.warn("Comment with ID {} is not in CHECKING state. Cannot update status", commentId);
             throw new ValidationException("Comment is not in CHECKING state. Cannot update status");
         }
-        comment.setStatus(status);
+        comment.setStatus(status.getStatus());
         commentRepository.save(comment);
         log.info("Status of comment with ID {} has been updated successfully", commentId);
         return commentMapper.mapToCommentDto(comment);
@@ -67,9 +100,11 @@ public class CommentServiceImpl implements CommentService {
     public void deleteCommentByIdFromAdmin(Long commentId) {
         log.info("Deleting comment with ID {} from admin", commentId);
         Comment comment = createCommentById(commentId);
+
+        // Установка флага удаления вместо физического удаления
         comment.setIsDeleted(true);
         commentRepository.save(comment);
-        comment.setStatus(StatusComment.DELETED);
+        comment.setStatus(StatusComment.DELETED); // Сохраняем историю модерации
         log.info("Comment with ID {} has been soft-deleted by admin successfully", commentId);
     }
 
@@ -90,9 +125,9 @@ public class CommentServiceImpl implements CommentService {
             log.warn("Event with ID {} is not published. Cannot get comments", eventId);
             throw new ValidationException("Event is not published. Cannot get comments");
         }
-        PageRequest pageRequest = PageRequest.of(from / size, size);
+        Pageable pageable = PageRequest.of(from / size, size);
         List<Comment> comments = commentRepository.findAllByEventIdAndStatusAndIsDeletedFalse(
-                eventId, StatusComment.PUBLISHED, pageRequest);
+                eventId, StatusComment.PUBLISHED, pageable);
         return Optional.of(comments)
                 .filter(c -> !c.isEmpty())
                 .map(c -> c.stream()
@@ -116,7 +151,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentDto getCommentById(Long userId, Long commentId) {
-        log.info("Getting comment by ID {}", commentId);
+        log.info("Getting from user with ID {}, for comment with ID {}", userId, commentId);
         checkUserExists(userId);
         return commentMapper.mapToCommentDto(commentRepository.findByIdAndAuthorIdAndIsDeletedFalse(
                 commentId, userId).orElseThrow(
@@ -134,7 +169,6 @@ public class CommentServiceImpl implements CommentService {
             throw new ValidationException("Event is not published. Cannot add new comment");
         }
         Comment comment = commentMapper.mapToComment(newCommentDto, user, event);
-        comment.setStatus(StatusComment.CHECKING);
         comment = commentRepository.save(comment);
         log.info("Comment with ID {} has been added successfully", comment.getId());
         return commentMapper.mapToCommentDto(comment);
@@ -168,8 +202,30 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
-    public CommentDto addNewReply(Long eventId, Long parentCommentId, CommentDto commentDto) {
-        return null;
+    @Transactional
+    public CommentDto addNewReply(Long userId, Long eventId, Long parentCommentId, NewCommentDto newCommentDto) {
+        log.info("User {} adding reply to comment {} in event {}. Text: {}",
+                userId, parentCommentId, eventId,
+                newCommentDto.getText().substring(0, Math.min(20, newCommentDto.getText().length())) + "...");
+        User user = createUserById(userId);
+        Event event = createEventById(eventId);
+        Comment parentComment = createCommentById(parentCommentId);
+        if (parentComment.getIsDeleted()) {
+            log.warn("Parent comment with ID {} is deleted. Cannot add new reply", parentCommentId);
+            throw new ValidationException("Parent comment is deleted. Cannot add new reply");
+        }
+
+        if (!parentComment.getEvent().getId().equals(eventId)) {
+            log.warn("Parent comment with ID {} is not in the same event", parentCommentId);
+            throw new ValidationException("Parent comment is not in the same event");
+        }
+        Comment commentReply = commentMapper.mapToComment(newCommentDto, user, event);
+        commentReply.setParentComment(parentComment);
+        commentReply = commentRepository.save(commentReply);
+        parentComment.getReplies().add(commentReply);
+        commentRepository.save(parentComment);
+        log.info("New reply comment with ID {} has been added successfully", commentReply.getId());
+        return commentMapper.mapToCommentDto(commentReply);
     }
 
     @Override
@@ -205,5 +261,18 @@ public class CommentServiceImpl implements CommentService {
             log.warn("User with ID {} is not the author of the comment with ID {}", user.getId(), comment.getId());
             throw new SelfParticipationException("User is not the author of the comment");
         }
+    }
+
+    private List<Comment> findAllReplyComments(Comment parentComment, StatusComment status) {
+        List<Comment> allReplies = new ArrayList<>();
+        Queue<Comment> queue = new LinkedList<>(parentComment.getReplies());
+        while (!queue.isEmpty()) {
+            Comment reply = queue.poll();
+            if (status == null || reply.getStatus() == status) {
+                allReplies.add(reply);
+                queue.addAll(reply.getReplies()); // Вложенные ответы
+            }
+        }
+        return allReplies;
     }
 }

@@ -13,6 +13,8 @@ import ru.practicum.model.User;
 @Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING)
 public interface CommentMapper {
 
+    @Mapping(source = "author.name", target = "authorName")
+    @Mapping(target = "parentId", source = "parentComment.id")
     @Mapping(source = "author.id", target = "authorId")
     @Mapping(source = "event.id", target = "eventId")
     CommentDto mapToCommentDto(Comment comment);
