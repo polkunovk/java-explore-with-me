@@ -9,23 +9,20 @@ import ru.practicum.dtos.comment.NewCommentDto;
 import ru.practicum.model.Comment;
 import ru.practicum.model.Event;
 import ru.practicum.model.User;
-import ru.practicum.enums.StatusComment;
 
-@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE,
-        componentModel = MappingConstants.ComponentModel.SPRING,
-        imports = StatusComment.class)
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING)
 public interface CommentMapper {
 
     @Mapping(source = "author.name", target = "authorName")
-    @Mapping(source = "parentComment.id", target = "parentId")
+    @Mapping(target = "parentId", source = "parentComment.id")
     @Mapping(source = "author.id", target = "authorId")
     @Mapping(source = "event.id", target = "eventId")
-    CommentDto toDto(Comment comment);
+    CommentDto mapToCommentDto(Comment comment);
 
     @Mapping(target = "author", source = "user")
     @Mapping(target = "event", source = "event")
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "status", expression = "java(StatusComment.CHECKING)")
+    @Mapping(target = "status", expression = "java(ru.practicum.enums.StatusComment.CHECKING)")
     @Mapping(target = "isDeleted", constant = "false")
-    Comment toEntity(NewCommentDto newCommentDto, User user, Event event);
+    Comment mapToComment(NewCommentDto newCommentDto, User user, Event event);
 }
