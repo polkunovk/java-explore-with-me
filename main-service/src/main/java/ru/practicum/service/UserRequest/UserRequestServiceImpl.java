@@ -33,11 +33,9 @@ public class UserRequestServiceImpl implements UserRequestService {
     public List<ParticipationRequestDto> getAllUserRequests(Long userId) {
         log.info("Get all user requests with userId={}", userId);
         checkUserExists(userId);
-
         List<ParticipationRequestDto> result = requestRepository.findAllByRequesterId(userId).stream()
                 .map(RequestMapper::toParticipationRequestDto)
                 .toList();
-
         log.info("Found {} requests for user with id={}", result.size(), userId);
         return result;
     }
@@ -47,36 +45,35 @@ public class UserRequestServiceImpl implements UserRequestService {
     public ParticipationRequestDto createUserRequest(Long userId, Long eventId) {
         log.info("Create user request with userId={} and eventId={}", userId, eventId);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        String.format("User with id=%d not found", userId)));
-
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        String.format("Event with id=%d not found", eventId)));
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new EntityNotFoundException(String.format("User with id=%d not found", userId)));
+        Event event = eventRepository.findById(eventId).orElseThrow(
+                () -> new EntityNotFoundException(String.format("Event with id=%d not found", eventId)));
 
         if (!event.getState().equals(State.PUBLISHED)) {
             log.info("Event with id={} not published", eventId);
-            throw new InvalidStateException("Event not published: " + eventId);
+            throw new InvalidStateException(String.format("Event with id=%d not published", eventId));
         }
 
         if (requestRepository.existsByEventIdAndRequesterId(eventId, userId)) {
-            log.info("Duplicate request userId={}, eventId={}", userId, eventId);
-            throw new InvalidStateException("Duplicate request for user: " + userId + ", event: " + eventId);
+            log.info("Request already created with userId={} and eventId={}", userId, eventId);
+            throw new InvalidStateException(String.format(
+                    "Request already created with userId=%d and eventId=%d", userId, eventId));
         }
 
         if (event.getInitiator().getId().equals(userId)) {
-            log.info("Self-participation attempt userId={}, eventId={}", userId, eventId);
-            throw new SelfParticipationException(
-                    "Initiator cannot participate in own event: " + eventId);
+            log.info("User with id={} is initiator of event with id={}", userId, eventId);
+            throw new SelfParticipationException(String.format("The event initiator with id=%d " +
+                    "cannot add a request to participate in his event with id=%d", userId, eventId));
         }
 
-        Integer confirmedRequests = requestRepository.countByEventIdAndStatus(eventId, Status.CONFIRMED);
-        log.info("Current confirmed requests for event {}: {}", eventId, confirmedRequests);
+        Integer requestCount = requestRepository.countByEventIdAndStatus(eventId, Status.CONFIRMED);
+        log.info("Total participation requests for event {}: {}", eventId, requestCount);
 
-        if (event.getParticipantLimit() > 0 && confirmedRequests >= event.getParticipantLimit()) {
-            log.info("Participant limit reached for event {}", eventId);
-            throw new ParticipantLimitReachedException("Event participant limit reached: " + eventId);
+        if (event.getParticipantLimit() > 0 && requestCount >= event.getParticipantLimit()) {
+            log.info("The event with id={} has already reached the participant limit", eventId);
+            throw new ParticipantLimitReachedException(String.format(
+                    "The event with id=%d has already reached the participant limit", eventId));
         }
 
         Request newRequest = new Request();
@@ -85,18 +82,18 @@ public class UserRequestServiceImpl implements UserRequestService {
         newRequest.setCreated(LocalDateTime.now());
 
         if (!event.getRequestModeration() || event.getParticipantLimit() == 0) {
+            log.info("The event with id={} does not require moderation", eventId);
             newRequest.setStatus(Status.CONFIRMED);
-            int currentCount = Optional.ofNullable(event.getConfirmedRequests()).orElse(0);
-            event.setConfirmedRequests(currentCount + 1);
-            eventRepository.save(event);
-            log.info("Auto-confirmed request for event {}", eventId);
-        } else {
-            newRequest.setStatus(Status.PENDING);
-            log.info("Request requires moderation for event {}", eventId);
-        }
 
+            event.setConfirmedRequests(Optional.ofNullable(event.getConfirmedRequests()).orElse(0) + 1);
+
+            eventRepository.save(event);
+        } else {
+            log.info("The event with id={} requires moderation", eventId);
+            newRequest.setStatus(Status.PENDING);
+        }
         Request result = requestRepository.save(newRequest);
-        log.info("Created new request with id={}", result.getId());
+        log.info("Saved new request with id={}", newRequest.getId());
         return RequestMapper.toParticipationRequestDto(result);
     }
 
@@ -105,27 +102,21 @@ public class UserRequestServiceImpl implements UserRequestService {
     public ParticipationRequestDto cancelUserRequest(Long userId, Long requestId) {
         log.info("Cancel user request with userId={} and requestId={}", userId, requestId);
         checkUserExists(userId);
-
-        Request request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        String.format("Request with id=%d not found", requestId)));
-
+        Request request = requestRepository.findById(requestId).orElseThrow(
+                () -> new EntityNotFoundException(String.format("Request with id=%d not found", requestId)));
         if (!request.getRequester().getId().equals(userId)) {
-            log.info("Request ownership mismatch: requestId={}, userId={}", requestId, userId);
-            throw new ValidationException(
-                    "Request does not belong to user: " + requestId + ", " + userId);
+            log.info("Request with id={} not created by user with id={}", requestId, userId);
+            throw new ValidationException(String.format(
+                    "Request with id=%d not created by user with id=%d", requestId, userId));
         }
-
         request.setStatus(Status.CANCELED);
-        Request updated = requestRepository.save(request);
-        log.info("Canceled request with id={}", requestId);
-        return RequestMapper.toParticipationRequestDto(updated);
+        return RequestMapper.toParticipationRequestDto(requestRepository.save(request));
     }
 
     private void checkUserExists(Long userId) {
         if (!userRepository.existsById(userId)) {
-            log.info("User not found: userId={}", userId);
-            throw new EntityNotFoundException("User not found: " + userId);
+            log.info("User with id={} not found", userId);
+            throw new EntityNotFoundException(String.format("User with id=%d not found", userId));
         }
     }
 }
